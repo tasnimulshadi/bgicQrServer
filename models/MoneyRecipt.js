@@ -11,6 +11,7 @@ const moneyReciptSchema = new mongoose.Schema(
     travelEndDate: { type: Date, required: true },
     countryOfResidence: { type: String, required: true },
     telephone: { type: String, required: true },
+    premium: { type: String, required: true },
     insuredPerson: {
       fullName: { type: String, required: true },
       dateOfBirth: { type: Date, required: true },

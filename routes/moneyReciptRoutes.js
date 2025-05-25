@@ -16,6 +16,7 @@ router.post("/", verifyToken, async (req, res) => {
       countryOfResidence,
       telephone,
       insuredPerson,
+      premium
     } = req.body;
 
     const newMoneyRecipt = new MoneyRecipt({
@@ -28,6 +29,7 @@ router.post("/", verifyToken, async (req, res) => {
       countryOfResidence,
       telephone,
       insuredPerson,
+      premium
     });
 
     const savedMoneyRecipt = await newMoneyRecipt.save();
@@ -74,6 +76,7 @@ router.patch("/:id", verifyToken, async (req, res) => {
     countryOfResidence,
     telephone,
     insuredPerson,
+    premium
   } = req.body;
 
   try {
@@ -89,6 +92,7 @@ router.patch("/:id", verifyToken, async (req, res) => {
         countryOfResidence,
         telephone,
         insuredPerson,
+        premium
       },
       { new: true }
     );

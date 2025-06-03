@@ -43,7 +43,7 @@ router.post("/", verifyToken, async (req, res) => {
     } = req.body;
 
     const [result] = await conn.execute(
-      `INSERT INTO omp_policies (
+      `INSERT INTO omp (
         typeOfTRV, ompNumber, policyNumber, issueDate, firstName, lastName,
         dob, gender, address, mobile, email, passport, destination,
         travelDateFrom, travelDays, travelDateTo, countryOfResidence,
@@ -103,7 +103,7 @@ router.get("/", verifyToken, async (req, res) => {
   try {
     const { mobile, ompNumber } = req.query;
 
-    let query = "SELECT * FROM omp_policies WHERE is_deleted = FALSE";
+    let query = "SELECT * FROM omp WHERE is_deleted = FALSE";
     let params = [];
 
     if (mobile) {
@@ -133,9 +133,13 @@ router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!/^\d+$/.test(id)) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
     // MySQL query
     const [rows] = await conn.execute(
-      "SELECT * FROM omp_policies WHERE id = ? AND is_deleted = FALSE",
+      "SELECT * FROM omp WHERE id = ? AND is_deleted = FALSE",
       [id]
     );
 
@@ -228,7 +232,7 @@ router.patch("/:id", verifyToken, async (req, res) => {
     ];
 
     const sql = `
-      UPDATE omp_policies SET
+      UPDATE omp SET
         typeOfTRV = ?,
         ompNumber = ?,
         policyNumber = ?,
@@ -268,10 +272,7 @@ router.patch("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Not found" });
     }
 
-    const [rows] = await conn.execute(
-      "SELECT * FROM omp_policies WHERE id = ?",
-      [id]
-    );
+    const [rows] = await conn.execute("SELECT * FROM omp WHERE id = ?", [id]);
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
@@ -288,7 +289,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
     const { id } = req.params;
 
     const [result] = await conn.execute(
-      "UPDATE omp_policies SET is_deleted = 1 WHERE id = ?",
+      "UPDATE omp SET is_deleted = 1 WHERE id = ?",
       [id]
     );
 

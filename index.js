@@ -8,11 +8,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log(err));
+// mongoose
+//   .connect(process.env.MONGO_URI)
+//   .then(() => console.log("MongoDB connected"))
+//   .catch((err) => console.log(err));
 
+// app.use("/api/auth", require("./routes/authRoutes"));
+// app.use("/api/omp", require("./routes/ompRoutes"));
+
+//sql
 app.use("/api2/auth", require("./sqlRoutes/authRoutes"));
 app.use("/api2/omp", require("./sqlRoutes/ompRoutes"));
 

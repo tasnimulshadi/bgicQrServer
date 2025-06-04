@@ -1,81 +1,307 @@
 const express = require("express");
 const router = express.Router();
-const OMP = require("../models/OMP");
+const db = require("../db");
 const verifyToken = require("../middleware/authMiddleware");
 
-// POST: Create a new policy
+// CREATE
 router.post("/", verifyToken, async (req, res) => {
+  const conn = await db.getConnection();
   try {
-    const newOMP = new OMP(req.body);
-    const savedOMP = await newOMP.save();
-    res.status(201).json(savedOMP);
+    await conn.beginTransaction();
+
+    const {
+      typeOfTRV,
+      ompNumber,
+      policyNumber,
+      issueDate,
+      firstName,
+      lastName,
+      dob,
+      gender,
+      address,
+      mobile,
+      email,
+      passport,
+      destination,
+      travelDateFrom,
+      travelDays,
+      travelDateTo,
+      countryOfResidence,
+      limitOfCover,
+      limitOfCoverCurrency,
+      premium,
+      vat,
+      producer,
+      mrNo = null,
+      mrDate = null,
+      mop = null,
+      chequeNo = null,
+      chequeDate = null,
+      bank = null,
+      bankBranch = null,
+      note = null,
+    } = req.body;
+
+    const [result] = await conn.execute(
+      `INSERT INTO omp (
+        typeOfTRV, ompNumber, policyNumber, issueDate, firstName, lastName,
+        dob, gender, address, mobile, email, passport, destination,
+        travelDateFrom, travelDays, travelDateTo, countryOfResidence,
+        limitOfCover, limitOfCoverCurrency, premium, vat, producer,
+        mrNo, mrDate, mop, chequeNo, chequeDate, bank, bankBranch, note
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        typeOfTRV,
+        ompNumber,
+        policyNumber,
+        issueDate,
+        firstName,
+        lastName,
+        dob,
+        gender,
+        address,
+        mobile,
+        email,
+        passport,
+        destination,
+        travelDateFrom,
+        travelDays,
+        travelDateTo,
+        countryOfResidence,
+        limitOfCover,
+        limitOfCoverCurrency,
+        premium,
+        vat,
+        producer,
+        mrNo,
+        mrDate,
+        mop,
+        chequeNo,
+        chequeDate,
+        bank,
+        bankBranch,
+        note,
+      ]
+    );
+
+    await conn.commit();
+    res
+      .status(201)
+      .json({ message: "Policy created", policyId: result.insertId });
   } catch (err) {
+    await conn.rollback();
+    console.error(err);
     res.status(400).json({ error: err.message });
+  } finally {
+    conn.release();
   }
 });
 
-// Get all non-deleted data entries (auth required)
+// GET ALL
 router.get("/", verifyToken, async (req, res) => {
+  const conn = await db.getConnection();
   try {
     const { mobile, ompNumber } = req.query;
 
-    // Base query: not deleted
-    let query = { is_deleted: false };
+    let query = "SELECT * FROM omp WHERE is_deleted = FALSE";
+    let params = [];
 
-    // Optional filters
     if (mobile) {
-      query.mobile = { $regex: mobile, $options: "i" }; // case-insensitive partial match
+      query += " AND mobile LIKE ?";
+      params.push(`%${mobile}%`);
     }
 
     if (ompNumber) {
-      query.ompNumber = { $regex: ompNumber, $options: "i" };
+      query += " AND ompNumber LIKE ?";
+      params.push(`%${ompNumber}%`);
     }
 
-    const data = await OMP.find(query);
-    res.json(data);
+    const [rows] = await conn.execute(query, params);
+
+    res.json(rows);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ error: err.message });
+  } finally {
+    conn.release();
   }
 });
 
-// Public: Get a single data entry by ID (no auth required)
+// GET SINGLE
 router.get("/:id", async (req, res) => {
+  const conn = await db.getConnection();
   try {
-    const omp = await OMP.findById(req.params.id);
-    if (!omp || omp.is_deleted)
+    const { id } = req.params;
+
+    if (!/^\d+$/.test(id)) {
       return res.status(404).json({ error: "Not found" });
-    res.json(omp);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    }
 
-// PATCH: Update policy by ID
-router.patch("/:id", verifyToken, async (req, res) => {
-  try {
-    const updatedOMP = await OMP.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!updatedOMP) return res.status(404).json({ error: "Not found" });
-    res.json(updatedOMP);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Soft delete a data entry by ID (auth required)
-router.delete("/:id", verifyToken, async (req, res) => {
-  try {
-    const deletedOMP = await OMP.findByIdAndUpdate(
-      req.params.id,
-      { is_deleted: true },
-      { new: true }
+    // MySQL query
+    const [rows] = await conn.execute(
+      "SELECT * FROM omp WHERE id = ? AND is_deleted = FALSE",
+      [id]
     );
-    if (!deletedOMP) return res.status(404).json({ error: "Not found" });
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+// UPDATE
+router.patch("/:id", verifyToken, async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    const { id } = req.params;
+    const {
+      typeOfTRV,
+      ompNumber,
+      policyNumber,
+      issueDate,
+      firstName,
+      lastName,
+      dob,
+      gender,
+      address,
+      mobile,
+      email,
+      passport,
+      destination,
+      travelDateFrom,
+      travelDays,
+      travelDateTo,
+      countryOfResidence,
+      limitOfCover,
+      limitOfCoverCurrency,
+      premium,
+      vat,
+      producer,
+      mrNo,
+      mrDate,
+      mop,
+      chequeNo,
+      chequeDate,
+      bank,
+      bankBranch,
+      note,
+    } = req.body;
+
+    // Replace undefined with null
+    const sanitize = (val) => (val === undefined ? null : val);
+
+    const params = [
+      sanitize(typeOfTRV),
+      sanitize(ompNumber),
+      sanitize(policyNumber),
+      sanitize(issueDate),
+      sanitize(firstName),
+      sanitize(lastName),
+      sanitize(dob),
+      sanitize(gender),
+      sanitize(address),
+      sanitize(mobile),
+      sanitize(email),
+      sanitize(passport),
+      sanitize(destination),
+      sanitize(travelDateFrom),
+      sanitize(travelDays),
+      sanitize(travelDateTo),
+      sanitize(countryOfResidence),
+      sanitize(limitOfCover),
+      sanitize(limitOfCoverCurrency),
+      sanitize(premium),
+      sanitize(vat),
+      sanitize(producer),
+      sanitize(mrNo),
+      sanitize(mrDate),
+      sanitize(mop),
+      sanitize(chequeNo),
+      sanitize(chequeDate),
+      sanitize(bank),
+      sanitize(bankBranch),
+      sanitize(note),
+      id,
+    ];
+
+    const sql = `
+      UPDATE omp SET
+        typeOfTRV = ?,
+        ompNumber = ?,
+        policyNumber = ?,
+        issueDate = ?,
+        firstName = ?,
+        lastName = ?,
+        dob = ?,
+        gender = ?,
+        address = ?,
+        mobile = ?,
+        email = ?,
+        passport = ?,
+        destination = ?,
+        travelDateFrom = ?,
+        travelDays = ?,
+        travelDateTo = ?,
+        countryOfResidence = ?,
+        limitOfCover = ?,
+        limitOfCoverCurrency = ?,
+        premium = ?,
+        vat = ?,
+        producer = ?,
+        mrNo = ?,
+        mrDate = ?,
+        mop = ?,
+        chequeNo = ?,
+        chequeDate = ?,
+        bank = ?,
+        bankBranch = ?,
+        note = ?
+      WHERE id = ?
+    `;
+
+    const [result] = await conn.execute(sql, params);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    const [rows] = await conn.execute("SELECT * FROM omp WHERE id = ?", [id]);
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+// DELETE soft del
+router.delete("/:id", verifyToken, async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    const { id } = req.params;
+
+    const [result] = await conn.execute(
+      "UPDATE omp SET is_deleted = 1 WHERE id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
     res.json({ message: "OMP entry soft deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
   }
 });
 

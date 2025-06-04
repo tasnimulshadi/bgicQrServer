@@ -2,9 +2,15 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const verifyToken = require("../middleware/authMiddleware");
+const { ompCreateSchema, ompUpdateSchema } = require("../schema/ompSchema");
 
 // CREATE
 router.post("/", verifyToken, async (req, res) => {
+  const { error } = ompCreateSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
@@ -73,14 +79,14 @@ router.post("/", verifyToken, async (req, res) => {
         premium,
         vat,
         producer,
-        mrNo,
-        mrDate,
-        mop,
-        chequeNo,
-        chequeDate,
-        bank,
-        bankBranch,
-        note,
+        mrNo || null,
+        mrDate || null,
+        mop || null,
+        chequeNo || null,
+        chequeDate || null,
+        bank || null,
+        bankBranch || null,
+        note || null,
       ]
     );
 
@@ -90,8 +96,8 @@ router.post("/", verifyToken, async (req, res) => {
       .json({ message: "Policy created", policyId: result.insertId });
   } catch (err) {
     await conn.rollback();
-    console.error(err);
-    res.status(400).json({ error: err.message });
+    console.error("CREATE Error:", err);
+    res.status(500).json({ error: "Server error while creating policy." });
   } finally {
     conn.release();
   }
@@ -115,6 +121,12 @@ router.get("/", verifyToken, async (req, res) => {
       query += " AND ompNumber LIKE ?";
       params.push(`%${ompNumber}%`);
     }
+
+    // pagination
+    const { page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+    query += " LIMIT ? OFFSET ?";
+    params.push(Number(limit), Number(offset));
 
     const [rows] = await conn.execute(query, params);
 
@@ -161,122 +173,38 @@ router.patch("/:id", verifyToken, async (req, res) => {
   const conn = await db.getConnection();
   try {
     const { id } = req.params;
-    const {
-      typeOfTRV,
-      ompNumber,
-      policyNumber,
-      issueDate,
-      firstName,
-      lastName,
-      dob,
-      gender,
-      address,
-      mobile,
-      email,
-      passport,
-      destination,
-      travelDateFrom,
-      travelDays,
-      travelDateTo,
-      countryOfResidence,
-      limitOfCover,
-      limitOfCoverCurrency,
-      premium,
-      vat,
-      producer,
-      mrNo,
-      mrDate,
-      mop,
-      chequeNo,
-      chequeDate,
-      bank,
-      bankBranch,
-      note,
-    } = req.body;
 
-    // Replace undefined with null
-    const sanitize = (val) => (val === undefined ? null : val);
+    // Validate input
+    const { error, value } = ompUpdateSchema.validate(req.body, {
+      stripUnknown: true,
+    });
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
 
-    const params = [
-      sanitize(typeOfTRV),
-      sanitize(ompNumber),
-      sanitize(policyNumber),
-      sanitize(issueDate),
-      sanitize(firstName),
-      sanitize(lastName),
-      sanitize(dob),
-      sanitize(gender),
-      sanitize(address),
-      sanitize(mobile),
-      sanitize(email),
-      sanitize(passport),
-      sanitize(destination),
-      sanitize(travelDateFrom),
-      sanitize(travelDays),
-      sanitize(travelDateTo),
-      sanitize(countryOfResidence),
-      sanitize(limitOfCover),
-      sanitize(limitOfCoverCurrency),
-      sanitize(premium),
-      sanitize(vat),
-      sanitize(producer),
-      sanitize(mrNo),
-      sanitize(mrDate),
-      sanitize(mop),
-      sanitize(chequeNo),
-      sanitize(chequeDate),
-      sanitize(bank),
-      sanitize(bankBranch),
-      sanitize(note),
-      id,
-    ];
+    // Build dynamic query and params
+    const fields = Object.keys(value);
+    if (fields.length === 0) {
+      return res.status(400).json({ error: "No fields to update." });
+    }
 
-    const sql = `
-      UPDATE omp SET
-        typeOfTRV = ?,
-        ompNumber = ?,
-        policyNumber = ?,
-        issueDate = ?,
-        firstName = ?,
-        lastName = ?,
-        dob = ?,
-        gender = ?,
-        address = ?,
-        mobile = ?,
-        email = ?,
-        passport = ?,
-        destination = ?,
-        travelDateFrom = ?,
-        travelDays = ?,
-        travelDateTo = ?,
-        countryOfResidence = ?,
-        limitOfCover = ?,
-        limitOfCoverCurrency = ?,
-        premium = ?,
-        vat = ?,
-        producer = ?,
-        mrNo = ?,
-        mrDate = ?,
-        mop = ?,
-        chequeNo = ?,
-        chequeDate = ?,
-        bank = ?,
-        bankBranch = ?,
-        note = ?
-      WHERE id = ?
-    `;
+    const updates = fields.map((field) => `${field} = ?`).join(", ");
+    const params = fields.map((key) => value[key]);
+    params.push(id); // for WHERE id = ?
+
+    const sql = `UPDATE omp SET ${updates} WHERE id = ?`;
 
     const [result] = await conn.execute(sql, params);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "Not found" });
+      return res.status(404).json({ error: "Policy not found" });
     }
 
     const [rows] = await conn.execute("SELECT * FROM omp WHERE id = ?", [id]);
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: err.message });
+    console.error("PATCH Error:", err);
+    res.status(500).json({ error: "Server error while updating policy." });
   } finally {
     conn.release();
   }

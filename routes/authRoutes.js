@@ -40,14 +40,14 @@ router.post("/login", async (req, res) => {
     ]);
 
     if (users.length === 0) {
-      return res.status(400).json({ error: "User not found" });
+      return res.status(400).json({ error: "Wrong Username." });
     }
 
     const user = users[0];
 
     // Direct password comparison (plain text)
     if (password !== user.password) {
-      return res.status(400).json({ error: "Wrong password" });
+      return res.status(400).json({ error: "Wrong Password." });
     }
 
     // Generate JWT

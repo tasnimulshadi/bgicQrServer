@@ -1,20 +1,21 @@
 // db.js
 const mysql = require("mysql2");
+require("dotenv").config();
 
 // Development
 const pool = mysql.createPool({
   host: "localhost",
   user: "root",
-  password: "", // or your MySQL password
+  password: "",
   database: "bgicqr",
 });
 
 // Production
 // const pool = mysql.createPool({
-//   host: "localhost",
-//   user: "bgicl_bgic_omp_qr",
-//   password: "ap3!i*(!7?Wd", // or your MySQL password
-//   database: "bgicl_bgic_omp_qr",
+//   host: process.env.DB_HOST,
+//   user: process.env.DB_USER,
+//   password: process.env.DB_PASSWORD,
+//   database: process.env.DB_NAME,
 // });
 
 module.exports = pool.promise();

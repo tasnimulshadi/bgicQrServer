@@ -17,6 +17,7 @@ router.post("/", verifyToken, async (req, res) => {
 
     const {
       typeOfTRV,
+      planCode,
       ompNumber,
       policyNumber,
       issueDate,
@@ -34,7 +35,7 @@ router.post("/", verifyToken, async (req, res) => {
       travelDateTo,
       countryOfResidence,
       limitOfCover,
-      limitOfCoverCurrency,
+      currency,
       premium,
       vat,
       producer,
@@ -50,14 +51,15 @@ router.post("/", verifyToken, async (req, res) => {
 
     const [result] = await conn.execute(
       `INSERT INTO omp (
-        typeOfTRV, ompNumber, policyNumber, issueDate, firstName, lastName,
+        typeOfTRV,planCode, ompNumber, policyNumber, issueDate, firstName, lastName,
         dob, gender, address, mobile, email, passport, destination,
         travelDateFrom, travelDays, travelDateTo, countryOfResidence,
-        limitOfCover, limitOfCoverCurrency, premium, vat, producer,
+        limitOfCover, currency, premium, vat, producer,
         mrNo, mrDate, mop, chequeNo, chequeDate, bank, bankBranch, note
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         typeOfTRV,
+        planCode,
         ompNumber,
         policyNumber,
         issueDate,
@@ -75,7 +77,7 @@ router.post("/", verifyToken, async (req, res) => {
         travelDateTo,
         countryOfResidence,
         limitOfCover,
-        limitOfCoverCurrency,
+        currency,
         premium,
         vat,
         producer,

@@ -3,6 +3,7 @@ import Joi from "joi";
 
 export const ompCreateSchema = Joi.object({
   typeOfTRV: Joi.string().required(),
+  planCode: Joi.string().required(),
   ompNumber: Joi.string().required(),
   policyNumber: Joi.string().required(),
   issueDate: Joi.date().required(),
@@ -20,16 +21,16 @@ export const ompCreateSchema = Joi.object({
   travelDateTo: Joi.date().required(),
   countryOfResidence: Joi.string().required(),
   limitOfCover: Joi.number().required(),
-  limitOfCoverCurrency: Joi.string().required(),
+  currency: Joi.string().required(),
   premium: Joi.number().required(),
   vat: Joi.number().required(),
   producer: Joi.string().required(),
 
   mrNo: Joi.string().allow(null, ""),
-  mrDate: Joi.date().allow(null),
+  mrDate: Joi.date().allow(null, ""),
   mop: Joi.string().allow(null, ""),
   chequeNo: Joi.string().allow(null, ""),
-  chequeDate: Joi.date().allow(null),
+  chequeDate: Joi.date().allow(null, ""),
   bank: Joi.string().allow(null, ""),
   bankBranch: Joi.string().allow(null, ""),
   note: Joi.string().allow(null, ""),
@@ -38,6 +39,7 @@ export const ompCreateSchema = Joi.object({
 // Define Joi schema for PATCH (all fields optional)
 export const ompUpdateSchema = Joi.object({
   typeOfTRV: Joi.string(),
+  planCode: Joi.string(),
   ompNumber: Joi.string(),
   policyNumber: Joi.string(),
   issueDate: Joi.date(),
@@ -55,7 +57,7 @@ export const ompUpdateSchema = Joi.object({
   travelDateTo: Joi.date(),
   countryOfResidence: Joi.string(),
   limitOfCover: Joi.number(),
-  limitOfCoverCurrency: Joi.string(),
+  currency: Joi.string(),
   premium: Joi.number(),
   vat: Joi.number(),
   producer: Joi.string(),

@@ -107,30 +107,35 @@ router.post("/", verifyToken, async (req, res) => {
 router.get("/", verifyToken, async (req, res) => {
   const conn = await db.getConnection();
   try {
-    const { mobile, ompNumber } = req.query;
-
-    let query = "SELECT * FROM omp WHERE is_deleted = FALSE";
+    const { mobile, ompNumber, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+    let whereClause = "WHERE is_deleted = FALSE";
     let params = [];
 
     if (mobile) {
-      query += " AND mobile LIKE ?";
+      whereClause += " AND mobile LIKE ?";
       params.push(`%${mobile}%`);
     }
 
     if (ompNumber) {
-      query += " AND ompNumber LIKE ?";
+      whereClause += " AND ompNumber LIKE ?";
       params.push(`%${ompNumber}%`);
     }
 
-    // pagination
-    const { page = 1, limit = 50 } = req.query;
-    const offset = (page - 1) * limit;
-    query += " LIMIT ? OFFSET ?";
-    params.push(Number(limit), Number(offset));
+    // Get total count
+    const [countResult] = await conn.execute(
+      `SELECT COUNT(*) as total FROM omp ${whereClause}`,
+      params
+    );
+    const total = countResult[0].total;
 
-    const [rows] = await conn.execute(query, params);
+    // Get paginated data
+    const [rows] = await conn.execute(
+      `SELECT * FROM omp ${whereClause} LIMIT ? OFFSET ?`,
+      [...params, Number(limit), Number(offset)]
+    );
 
-    res.json(rows);
+    res.json({ data: rows, total });
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: err.message });

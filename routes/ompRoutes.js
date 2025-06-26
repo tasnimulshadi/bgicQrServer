@@ -49,9 +49,22 @@ router.post("/", verifyToken, async (req, res) => {
       note = null,
     } = req.body;
 
+    // ✅ Check for existing ompNumber and Year of issueDate
+    const year = new Date(issueDate).getFullYear(); // or use moment(issueDate).year() if using moment.js
+    const [existing] = await conn.execute(
+      "SELECT * FROM omp WHERE ompNumber = ? AND YEAR(issueDate) = ? AND is_deleted = FALSE",
+      [ompNumber, year]
+    );
+
+    if (existing.length > 0) {
+      await conn.rollback();
+      return res.status(400).json({ error: "Policy number already exists." });
+    }
+
+    // ✅ Proceed with insert
     const [result] = await conn.execute(
       `INSERT INTO omp (
-        typeOfTRV,planCode, ompNumber, policyNumber, issueDate, firstName, lastName,
+        typeOfTRV, planCode, ompNumber, policyNumber, issueDate, firstName, lastName,
         dob, gender, address, mobile, email, passport, destination,
         travelDateFrom, travelDays, travelDateTo, countryOfResidence,
         limitOfCover, currency, premium, vat, producer,
@@ -81,14 +94,14 @@ router.post("/", verifyToken, async (req, res) => {
         premium,
         vat,
         producer,
-        mrNo || null,
-        mrDate || null,
-        mop || null,
-        chequeNo || null,
-        chequeDate || null,
-        bank || null,
-        bankBranch || null,
-        note || null,
+        mrNo,
+        mrDate,
+        mop,
+        chequeNo,
+        chequeDate,
+        bank,
+        bankBranch,
+        note,
       ]
     );
 
@@ -121,7 +134,7 @@ router.get("/", verifyToken, async (req, res) => {
 
     if (ompNumber) {
       whereClause += " AND ompNumber LIKE ?";
-      params.push(`%${ompNumber}%`);
+      params.push(`%${ompNumber.toString()}%`);
     }
 
     // Get total count
@@ -176,6 +189,46 @@ router.get("/:id", async (req, res) => {
 });
 
 // UPDATE
+// router.patch("/:id", verifyToken, async (req, res) => {
+//   const conn = await db.getConnection();
+//   try {
+//     const { id } = req.params;
+
+//     // Validate input
+//     const { error, value } = ompUpdateSchema.validate(req.body, {
+//       stripUnknown: true,
+//     });
+//     if (error) {
+//       return res.status(400).json({ error: error.details[0].message });
+//     }
+
+//     // Build dynamic query and params
+//     const fields = Object.keys(value);
+//     if (fields.length === 0) {
+//       return res.status(400).json({ error: "No fields to update." });
+//     }
+
+//     const updates = fields.map((field) => `${field} = ?`).join(", ");
+//     const params = fields.map((key) => value[key]);
+//     params.push(id); // for WHERE id = ?
+
+//     const sql = `UPDATE omp SET ${updates} WHERE id = ?`;
+
+//     const [result] = await conn.execute(sql, params);
+
+//     if (result.affectedRows === 0) {
+//       return res.status(404).json({ error: "Policy not found" });
+//     }
+
+//     const [rows] = await conn.execute("SELECT * FROM omp WHERE id = ?", [id]);
+//     res.json(rows[0]);
+//   } catch (err) {
+//     console.error("PATCH Error:", err);
+//     res.status(500).json({ error: "Server error while updating policy." });
+//   } finally {
+//     conn.release();
+//   }
+// });
 router.patch("/:id", verifyToken, async (req, res) => {
   const conn = await db.getConnection();
   try {
@@ -187,6 +240,22 @@ router.patch("/:id", verifyToken, async (req, res) => {
     });
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
+    }
+
+    // Check for ompNumber + year(issueDate) duplication
+    if (value.ompNumber && value.issueDate) {
+      const year = new Date(value.issueDate).getFullYear();
+
+      const [existing] = await conn.execute(
+        "SELECT id FROM omp WHERE ompNumber = ? AND YEAR(issueDate) = ? AND is_deleted = FALSE AND id != ?",
+        [value.ompNumber, year, id]
+      );
+
+      if (existing.length > 0) {
+        return res.status(400).json({
+          error: `Duplicate ompNumber found for year ${year}.`,
+        });
+      }
     }
 
     // Build dynamic query and params

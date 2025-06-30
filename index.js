@@ -12,6 +12,7 @@ app.use(cors());
 // Routes
 app.use("/api/v1/auth", require("./routes/authRoutes"));
 app.use("/api/v1/omp", require("./routes/ompRoutes"));
+app.use("/api/v1/mr", require("./routes/mrRoutes"));
 
 // To catch unhandled routes
 app.use((req, res, next) => {
